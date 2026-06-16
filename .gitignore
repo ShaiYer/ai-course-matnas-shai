@@ -36,5 +36,10 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Playwright
+.last-run.json
+test-results/
+playwright-report/
+
 # Prisma migrations lock (keep migrations, ignore lock file on some setups)
 prisma/migrations/migration_lock.toml

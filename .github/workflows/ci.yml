@@ -1,0 +1,162 @@
+name: CI
+
+# ─────────────────────────────────────────────────────────────
+# Level 1 (Steps 1–3): runs on every push to every branch
+# Level 2 (Steps 4–5): runs only on PRs and protected branches
+# ─────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master, main, release]
+
+# Cancel in-progress runs on the same branch when a new push arrives
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ── Step 1 ── Type Safety ──────────────────────────────────
+  type-check:
+    name: "Step 1 — Type Safety"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types (client)
+        run: npx tsc --noEmit
+        working-directory: client
+
+      - name: Check types (server)
+        run: npx tsc --noEmit
+        working-directory: server
+
+  # ── Step 2 ── Security Audit ───────────────────────────────
+  security:
+    name: "Step 2 — Security Audit"
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (high & critical only)
+        run: npm audit --audit-level=high
+
+  # ── Step 3 ── Unit & Integration Tests ────────────────────
+  unit-tests:
+    name: "Step 3 — Unit & Integration Tests"
+    runs-on: ubuntu-latest
+    needs: security
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations (test DB)
+        run: npx prisma migrate deploy
+        working-directory: server
+        env:
+          DATABASE_URL: file:./prisma/test.db
+
+      - name: Run unit & integration tests
+        run: npm test
+        env:
+          DATABASE_URL: file:./prisma/test.db
+
+  # ── Step 4 ── Build Verification ──────────────────────────
+  # Runs only on PRs and pushes to protected branches
+  build:
+    name: "Step 4 — Build Verification"
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: >
+      github.event_name == 'pull_request' ||
+      github.ref == 'refs/heads/master' ||
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build --workspace=client
+
+      - name: Build server
+        run: npm run build --workspace=server
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.run_id }}
+          path: |
+            client/dist
+            server/dist
+
+  # ── Step 5 ── E2E Smoke Tests ─────────────────────────────
+  e2e:
+    name: "Step 5 — E2E Smoke Tests"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup E2E database
+        working-directory: server
+        run: |
+          echo 'DATABASE_URL="file:./dev.db"' > .env
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: Run E2E smoke tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 7
