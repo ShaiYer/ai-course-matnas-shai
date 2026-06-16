@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 
 const STORAGE_KEY = 'cc_user';
-const mockUser = { id: 1, name: 'Alice', email: 'alice@test.com', isAdmin: false };
+const mockUser = { id: 1, name: 'Alice', email: 'alice@test.com', isAdmin: false, role: 'user' as const };
 
 function TestConsumer() {
   const { currentUser, login, logout } = useAuth();
