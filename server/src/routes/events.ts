@@ -199,8 +199,11 @@ router.put('/:id', resolveUser, requireManager, async (req, res) => {
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.delete('/:id', resolveUser, requireManager, async (req, res) => {
-  await prisma.registration.deleteMany({ where: { eventId: Number(req.params.id) } });
-  await prisma.event.delete({ where: { id: Number(req.params.id) } });
+  const id = Number(req.params.id);
+  const existing = await prisma.event.findUnique({ where: { id } });
+  if (!existing) { res.status(404).json({ error: 'Event not found' }); return; }
+  await prisma.registration.deleteMany({ where: { eventId: id } });
+  await prisma.event.delete({ where: { id } });
   res.json({ success: true });
 });
 

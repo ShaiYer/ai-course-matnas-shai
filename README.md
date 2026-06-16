@@ -45,12 +45,26 @@ That's it — then run `npm run dev` from the root.
 
 ## Running Tests
 
+**One-time setup** — create and migrate the test database before running tests for the first time:
+
+```bash
+cd server && DATABASE_URL="file:./prisma/test.db" npx prisma migrate deploy && cd ..
+```
+
 ```bash
 # Unit + integration tests (server + client)
 npm test
 
+# Watch mode (re-runs on file change)
+npm run test:watch -w client
+npm run test:watch -w server
+
 # E2E smoke tests (requires dev servers running in another terminal)
-npm run test:e2e
+npm run dev         # terminal 1
+npm run test:e2e    # terminal 2
+
+# E2E with interactive Playwright UI
+npx playwright test --ui
 ```
 
 **Swagger UI** (live API docs, requires server running): http://localhost:3001/api-docs

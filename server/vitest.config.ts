@@ -10,7 +10,6 @@ export default defineConfig({
       NODE_ENV: 'test',
     },
     // Run test files sequentially to avoid DB race conditions
-    pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    fileParallelism: false,
   },
 });
