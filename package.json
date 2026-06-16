@@ -1,0 +1,14 @@
+{
+  "name": "ai-course-matnas-shai",
+  "private": true,
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "concurrently": "^8.2.2"
+  }
+}
