@@ -67,7 +67,7 @@ test('3. Admin creates an event, verifies it on events page, then deletes it', a
 
   // Go back to admin and delete
   await page.goto('/admin');
-  const row = page.locator('div').filter({ hasText: title }).last();
+  const row = page.locator('.bg-white.rounded-xl').filter({ hasText: title });
   page.on('dialog', dialog => dialog.accept());
   await row.getByRole('button', { name: /delete/i }).click();
   await expect(page.getByText(title)).not.toBeVisible({ timeout: 5000 });
