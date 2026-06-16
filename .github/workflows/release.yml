@@ -103,6 +103,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: server
+
       - name: Build client
         run: npm run build --workspace=client
 
@@ -140,6 +144,7 @@ jobs:
         working-directory: server
         run: |
           echo 'DATABASE_URL="file:./dev.db"' > .env
+          npx prisma generate
           npx prisma migrate deploy
           npx prisma db seed
 
